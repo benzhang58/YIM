@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "GymBusy",
+    "slug": "gymbusy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "gymbusy",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gymbusy.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "GymBusy uses your location to show nearby gyms and sort by distance.",
+        "NSUserTrackingUsageDescription": "GymBusy may use identifiers to reduce spam and improve crowd report integrity."
+      }
+    },
+    "android": {
+      "package": "com.gymbusy.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      "expo-web-browser",
+      "expo-notifications"
+    ]
+  }
+}

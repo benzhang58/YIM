@@ -1,6 +1,5 @@
 import { useFonts } from "expo-font";
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
-import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AppNavigator } from "../navigation/AppNavigator";
@@ -33,8 +32,7 @@ export default function AppShell() {
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_700Bold
+    Inter_700Bold
   });
 
   if (!fontsLoaded) {

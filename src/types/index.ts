@@ -31,6 +31,9 @@ export type UserProfile = {
   provider: AuthProvider;
   email?: string;
   homeGymId?: string;
+  username?: string;
+  joinedAt?: string;
+  trustScore?: number;
 };
 
 export type GymCoordinates = {

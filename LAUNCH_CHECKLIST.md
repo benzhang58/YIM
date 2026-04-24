@@ -12,6 +12,9 @@ This file separates code-side launch work from items that require the app owner,
 - Rate limits for crowd reports and reviews.
 - User-facing moderation/reporting flow.
 - EAS build profiles for development, preview, and production.
+- Release validation script: `npm run validate:release`.
+- GitHub Actions CI for install, typecheck, and release validation.
+- Store listing draft and data safety draft under `store/`.
 
 ## Owner actions before store submission
 
@@ -26,6 +29,7 @@ This file separates code-side launch work from items that require the app owner,
 - Decide final bundle ID/package name. Current placeholder is `com.gymbusy.app`.
 - Provide final support email, support URL, privacy URL, and marketing website URL.
 - Create final App Store and Google Play listing copy, screenshots, icon, and splash assets.
+- Review and replace drafts in `store/metadata/en-US/listing.md` and `store/privacy/data-safety.md`.
 - Create a reviewer/test account if the stores need authenticated access.
 
 ## Final technical gates
@@ -38,6 +42,7 @@ This file separates code-side launch work from items that require the app owner,
 - Confirm account deletion requests are operationally monitored and processed.
 - Confirm location permission copy and notification permission copy match actual app behavior.
 - Confirm no seeded preview data appears in production unless intentionally seeded.
+- Run `npm run typecheck` and `npm run validate:release` before every production build.
 
 ## Build and submit commands
 

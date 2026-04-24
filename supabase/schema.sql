@@ -31,11 +31,21 @@ create table if not exists gym_locations (
 );
 
 create table if not exists user_profiles (
-  id uuid primary key,
+  id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
+  display_name text,
+  email text,
+  provider text not null default 'email',
   home_gym_id uuid references gyms(id),
+  trust_score integer not null default 75 check (trust_score >= 0 and trust_score <= 100),
   created_at timestamptz not null default now()
 );
+
+alter table user_profiles
+  add column if not exists display_name text,
+  add column if not exists email text,
+  add column if not exists provider text not null default 'email',
+  add column if not exists trust_score integer not null default 75 check (trust_score >= 0 and trust_score <= 100);
 
 create table if not exists reviews (
   id uuid primary key default gen_random_uuid(),
@@ -123,6 +133,18 @@ create table if not exists content_reports (
 
 create index if not exists idx_content_reports_status_created_at
   on content_reports (status, created_at desc);
+
+create table if not exists account_deletion_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references user_profiles(id) on delete cascade,
+  reason text,
+  status text not null default 'requested' check (status in ('requested', 'processing', 'completed', 'cancelled')),
+  requested_at timestamptz not null default now(),
+  processed_at timestamptz
+);
+
+create index if not exists idx_account_deletion_requests_status_requested_at
+  on account_deletion_requests (status, requested_at desc);
 
 create or replace function nearby_duplicate_gyms(
   search_name text,

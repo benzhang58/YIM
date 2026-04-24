@@ -3,6 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 import { applyCrowdReport } from "../services/busyness";
 import {
   createContentReport,
+  createAccountDeletionRequest,
   createCrowdReport,
   createGymSubmission,
   createReview,
@@ -11,7 +12,8 @@ import {
   loadSubmissions,
   updateContentReportStatus
 } from "../services/repository";
-import { signInWithProvider } from "../services/auth";
+import { getCurrentUserProfile, signInWithProvider, signOutAuth } from "../services/auth";
+import { isSupabaseConfigured, supabase } from "../services/supabase";
 import { ActionLog, actionKey, formatRemainingTime, getRemainingMs, rateLimitWindows } from "../services/rateLimits";
 import { findPotentialDuplicate, submissionToGym } from "../utils/listings";
 import {
@@ -47,7 +49,7 @@ type AppContextValue = {
   onboardingComplete: boolean;
   refreshData: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
-  signIn: (provider: AuthProvider) => Promise<void>;
+  signIn: (provider: AuthProvider, email?: string) => Promise<{ message: string }>;
   signOut: () => Promise<void>;
   getGym: (gymId: string) => Gym | undefined;
   submitBusyness: (gymId: string, level: BusynessLevel) => Promise<{ ok: boolean; message?: string }>;
@@ -55,6 +57,7 @@ type AppContextValue = {
   submitReview: (gymId: string, form: ReviewForm) => Promise<{ ok: boolean; message: string }>;
   reportContent: (form: ContentReportForm) => Promise<{ ok: boolean; message: string }>;
   updateReportStatus: (reportId: string, status: ContentReportStatus) => Promise<{ ok: boolean; message: string }>;
+  requestAccountDeletion: (reason?: string) => Promise<{ ok: boolean; message: string }>;
   updateSubmissionStatus: (submissionId: string, status: SubmissionStatus) => void;
 };
 
@@ -100,8 +103,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const storedActionLog = await AsyncStorage.getItem(ACTION_LOG_KEY);
 
       await refreshData();
+      const sessionUser = await getCurrentUserProfile(gyms[0]?.id);
       setOnboardingComplete(storedOnboarding === "true");
-      setUser(storedUser ? (JSON.parse(storedUser) as UserProfile) : null);
+      setUser(sessionUser ?? (storedUser ? (JSON.parse(storedUser) as UserProfile) : null));
       setActionLog(storedActionLog ? (JSON.parse(storedActionLog) as ActionLog) : {});
       setHydrated(true);
     };
@@ -109,21 +113,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     hydrate();
   }, []);
 
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        await AsyncStorage.removeItem(USER_KEY);
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        const nextUser = await getCurrentUserProfile(gyms[0]?.id);
+        if (nextUser) {
+          setUser(nextUser);
+          await AsyncStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [gyms]);
+
   const completeOnboarding = async () => {
     setOnboardingComplete(true);
     await AsyncStorage.setItem(ONBOARDING_KEY, "true");
   };
 
-  const signIn = async (provider: AuthProvider) => {
-    const nextUser = await signInWithProvider(provider, gyms[0]?.id);
+  const signIn = async (provider: AuthProvider, email?: string) => {
+    const result = await signInWithProvider(provider, gyms[0]?.id, email);
 
-    setUser(nextUser);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    if (result.user) {
+      setUser(result.user);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(result.user));
+    }
+
+    setLastSyncMessage(result.message);
+    return { message: result.message };
   };
 
   const signOut = async () => {
+    await signOutAuth();
     setUser(null);
     await AsyncStorage.removeItem(USER_KEY);
+    setLastSyncMessage("Signed out.");
   };
 
   const getGym = (gymId: string) => gyms.find((gym) => gym.id === gymId);
@@ -319,6 +356,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const requestAccountDeletion = async (reason?: string) => {
+    const result = await createAccountDeletionRequest({
+      user,
+      reason
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        message: result.message
+      };
+    }
+
+    setLastSyncMessage(result.message);
+    return {
+      ok: true,
+      message: result.message
+    };
+  };
+
   const updateSubmissionStatus = (submissionId: string, status: SubmissionStatus) => {
     const target = submissions.find((submission) => submission.id === submissionId);
     if (!target) {
@@ -358,6 +415,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submitReview,
       reportContent,
       updateReportStatus,
+      requestAccountDeletion,
       updateSubmissionStatus
     }),
     [gyms, submissions, contentReports, reports, user, actionLog, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]

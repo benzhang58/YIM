@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Screen } from "../../components/layout/Screen";
@@ -24,6 +24,8 @@ export function ProfileScreen() {
     useAppContext();
   const [notificationMessage, setNotificationMessage] = useState("");
   const [authAction, setAuthAction] = useState<AuthProvider | "signout" | null>(null);
+  const [email, setEmail] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
 
   const homeGym = useMemo(() => gyms.find((gym) => gym.id === user?.homeGymId), [gyms, user?.homeGymId]);
   const reviewsCount = useMemo(
@@ -43,7 +45,8 @@ export function ProfileScreen() {
   const handleSignIn = async (provider: AuthProvider) => {
     setAuthAction(provider);
     try {
-      await signIn(provider);
+      const result = await signIn(provider, provider === "email" ? email : undefined);
+      setAuthMessage(result.message);
     } finally {
       setAuthAction(null);
     }
@@ -90,13 +93,27 @@ export function ProfileScreen() {
           <View style={styles.stack}>
             <AppButton label="Continue with Apple" loading={authAction === "apple"} disabled={authAction !== null} onPress={() => handleSignIn("apple")} />
             <AppButton label="Continue with Google" loading={authAction === "google"} disabled={authAction !== null} onPress={() => handleSignIn("google")} />
+            <View style={styles.emailBox}>
+              <Text style={styles.emailLabel}>Email magic link</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                style={styles.emailInput}
+              />
+            </View>
             <AppButton
-              label="Continue with Email"
+              label="Send Email Link"
               variant="secondary"
               loading={authAction === "email"}
               disabled={authAction !== null}
               onPress={() => handleSignIn("email")}
             />
+            {authMessage ? <Text style={styles.statusLine}>{authMessage}</Text> : null}
           </View>
         </View>
       ) : (
@@ -267,6 +284,24 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: 10
+  },
+  emailBox: {
+    gap: 7
+  },
+  emailLabel: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 13
+  },
+  emailInput: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+    fontFamily: fonts.body,
+    paddingHorizontal: 14,
+    paddingVertical: 13
   },
   identityRow: {
     flexDirection: "row",

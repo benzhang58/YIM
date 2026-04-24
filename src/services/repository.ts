@@ -272,3 +272,31 @@ export async function updateContentReportStatus(input: {
 
   return { ok: true as const, mode: "supabase" as const };
 }
+
+export async function createAccountDeletionRequest(input: {
+  user: UserProfile | null;
+  reason?: string;
+}) {
+  if (!isSupabaseConfigured || !supabase || !input.user) {
+    return {
+      ok: true as const,
+      mode: "seeded" as const,
+      message: "Deletion request captured locally. Connect Supabase before production launch."
+    };
+  }
+
+  const { error } = await supabase.from("account_deletion_requests").insert({
+    user_id: input.user.id,
+    reason: input.reason?.trim() || null
+  });
+
+  if (error) {
+    return { ok: false as const, message: error.message };
+  }
+
+  return {
+    ok: true as const,
+    mode: "supabase" as const,
+    message: "Deletion request received. The account will be reviewed and processed by operations."
+  };
+}

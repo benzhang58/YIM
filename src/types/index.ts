@@ -17,6 +17,10 @@ export type Review = {
 export type SubmissionStatus = "pending" | "approved" | "rejected" | "merged";
 export type AuthProvider = "apple" | "google" | "email";
 export type BackendMode = "seeded" | "supabase";
+export type AuthResult = {
+  user: UserProfile | null;
+  message: string;
+};
 
 export type CrowdReport = {
   id: string;

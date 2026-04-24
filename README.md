@@ -77,7 +77,8 @@ Where `freshness_weight` drops over 90 minutes.
    - Apple
    - Google
    - Email magic link
-5. Add EAS credentials and build with [eas.json](/Users/benzhang/Desktop/PROJECTS/GYMBUSY/eas.json).
+5. Add `gymbusy://auth` as an allowed Supabase Auth redirect URL.
+6. Add EAS credentials and build with [eas.json](/Users/benzhang/Desktop/PROJECTS/GYMBUSY/eas.json).
 
 ## App Store path
 

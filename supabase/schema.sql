@@ -46,6 +46,9 @@ create table if not exists reviews (
   created_at timestamptz not null default now()
 );
 
+create index if not exists idx_reviews_user_gym_created_at
+  on reviews (user_id, gym_id, created_at desc);
+
 create table if not exists busyness_reports (
   id uuid primary key default gen_random_uuid(),
   gym_id uuid not null references gyms(id) on delete cascade,
@@ -57,6 +60,9 @@ create table if not exists busyness_reports (
 
 create index if not exists idx_busyness_reports_gym_created_at
   on busyness_reports (gym_id, created_at desc);
+
+create index if not exists idx_busyness_reports_user_gym_created_at
+  on busyness_reports (user_id, gym_id, created_at desc);
 
 create table if not exists gym_submission_requests (
   id uuid primary key default gen_random_uuid(),

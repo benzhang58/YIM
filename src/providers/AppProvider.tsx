@@ -12,6 +12,7 @@ import {
   updateContentReportStatus
 } from "../services/repository";
 import { signInWithProvider } from "../services/auth";
+import { ActionLog, actionKey, formatRemainingTime, getRemainingMs, rateLimitWindows } from "../services/rateLimits";
 import { findPotentialDuplicate, submissionToGym } from "../utils/listings";
 import {
   AuthProvider,
@@ -31,6 +32,7 @@ import {
 
 const ONBOARDING_KEY = "gymbusy:onboarding-complete";
 const USER_KEY = "gymbusy:mock-user";
+const ACTION_LOG_KEY = "gymbusy:action-log";
 
 type AppContextValue = {
   gyms: Gym[];
@@ -67,6 +69,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [contentReports, setContentReports] = useState<ContentReport[]>([]);
   const [reports, setReports] = useState<CrowdReport[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [actionLog, setActionLog] = useState<ActionLog>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncMessage, setLastSyncMessage] = useState<string | null>(null);
 
@@ -94,10 +97,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(ONBOARDING_KEY),
         AsyncStorage.getItem(USER_KEY)
       ]);
+      const storedActionLog = await AsyncStorage.getItem(ACTION_LOG_KEY);
 
       await refreshData();
       setOnboardingComplete(storedOnboarding === "true");
       setUser(storedUser ? (JSON.parse(storedUser) as UserProfile) : null);
+      setActionLog(storedActionLog ? (JSON.parse(storedActionLog) as ActionLog) : {});
       setHydrated(true);
     };
 
@@ -123,7 +128,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getGym = (gymId: string) => gyms.find((gym) => gym.id === gymId);
 
+  const recordAction = async (key: string) => {
+    const nextLog = {
+      ...actionLog,
+      [key]: Date.now()
+    };
+    setActionLog(nextLog);
+    await AsyncStorage.setItem(ACTION_LOG_KEY, JSON.stringify(nextLog));
+  };
+
   const submitBusyness = async (gymId: string, level: BusynessLevel) => {
+    const actorId = user?.id ?? "guest";
+    const key = actionKey("crowd", actorId, gymId);
+    const remainingMs = getRemainingMs(actionLog, key, rateLimitWindows.crowdReportMs);
+
+    if (remainingMs > 0) {
+      return {
+        ok: false,
+        message: `Crowd reports are limited for trust. Try again in ${formatRemainingTime(remainingMs)}.`
+      };
+    }
+
     const newReport: CrowdReport = {
       id: `report-${Date.now()}`,
       gymId,
@@ -156,6 +181,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     setLastSyncMessage(writeResult.mode === "supabase" ? "Live crowd report saved." : "Crowd report saved locally.");
+    await recordAction(key);
     return { ok: true };
   };
 
@@ -204,6 +230,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const submitReview = async (gymId: string, form: ReviewForm) => {
+    const actorId = user?.id ?? "guest";
+    const key = actionKey("review", actorId, gymId);
+    const remainingMs = getRemainingMs(actionLog, key, rateLimitWindows.reviewMs);
+
+    if (remainingMs > 0) {
+      return {
+        ok: false,
+        message: `Reviews are limited to keep feedback useful. Try again in ${formatRemainingTime(remainingMs)}.`
+      };
+    }
+
     const result = await createReview({
       gymId,
       form,
@@ -231,6 +268,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     setLastSyncMessage(backendMode === "supabase" ? "Review submitted to backend." : "Review saved locally.");
+    await recordAction(key);
     return {
       ok: true,
       message: "Review submitted."
@@ -322,7 +360,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateReportStatus,
       updateSubmissionStatus
     }),
-    [gyms, submissions, contentReports, reports, user, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]
+    [gyms, submissions, contentReports, reports, user, actionLog, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

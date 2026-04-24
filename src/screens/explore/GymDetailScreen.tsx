@@ -65,6 +65,12 @@ export function GymDetailScreen() {
       </View>
 
       <Text style={styles.sectionTitle}>Report live busyness</Text>
+      <View style={styles.trustPanel}>
+        <Text style={styles.trustTitle}>Signal protection</Text>
+        <Text style={styles.trustBody}>
+          Crowd reports are rate-limited per gym, and reviews are limited per member window so one account cannot distort the live score.
+        </Text>
+      </View>
       <View style={styles.voteRow}>
         {[25, 50, 75, 95].map((level) => (
           <Pressable
@@ -297,6 +303,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10
+  },
+  trustPanel: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    gap: 6
+  },
+  trustTitle: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 15
+  },
+  trustBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    lineHeight: 20
   },
   voteButton: {
     width: "48%",

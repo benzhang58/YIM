@@ -57,6 +57,8 @@ That keeps the marketplace broad enough to be useful without letting duplicate o
 - Reports decay over time so stale reports matter less.
 - The app computes a weighted average with more emphasis on recent check-ins.
 - A confidence label should appear when the report count is low.
+- Crowd reports should be rate-limited per user and gym to prevent one account from distorting the live score.
+- Reviews should be limited per user and gym window, then routed through content reporting if members flag abuse.
 
 Suggested formula:
 

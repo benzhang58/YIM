@@ -1,10 +1,4 @@
-# GymBusy
-
-GymBusy is a mobile app concept for iOS and Android that helps people decide when and where to work out. The MVP combines three ideas:
-
-- gym discovery
-- live member-submitted busyness reporting
-- historical traffic trends and machine-quality context
+# CONCEPT 
 
 ## What is in this scaffold
 

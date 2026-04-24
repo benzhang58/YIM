@@ -1,22 +1,42 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 import { fonts } from "../../constants/typography";
+import { lightTap } from "../../services/feedback";
 import { colors } from "../../theme/colors";
 
 export function AppButton({
   label,
   onPress,
-  variant = "primary"
+  variant = "primary",
+  loading = false,
+  disabled = false
 }: {
   label: string;
-  onPress: () => void;
+  onPress: () => void | Promise<void>;
   variant?: "primary" | "secondary";
+  loading?: boolean;
+  disabled?: boolean;
 }) {
+  const isDisabled = disabled || loading;
+
   return (
     <Pressable
-      onPress={onPress}
-      style={[styles.button, variant === "primary" ? styles.primary : styles.secondary]}
+      disabled={isDisabled}
+      onPress={async () => {
+        await lightTap();
+        await onPress();
+      }}
+      style={({ pressed }) => [
+        styles.button,
+        variant === "primary" ? styles.primary : styles.secondary,
+        pressed && !isDisabled && styles.pressed,
+        isDisabled && styles.disabled
+      ]}
     >
-      <Text style={[styles.text, variant === "primary" ? styles.primaryText : styles.secondaryText]}>{label}</Text>
+      {loading ? (
+        <ActivityIndicator color={variant === "primary" ? colors.surfaceStrong : colors.text} />
+      ) : (
+        <Text style={[styles.text, variant === "primary" ? styles.primaryText : styles.secondaryText]}>{label}</Text>
+      )}
     </Pressable>
   );
 }
@@ -34,6 +54,13 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: colors.surfaceAlt
+  },
+  pressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.86
+  },
+  disabled: {
+    opacity: 0.55
   },
   text: {
     fontFamily: fonts.semibold,

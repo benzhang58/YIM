@@ -9,6 +9,7 @@ import { fonts } from "../../constants/typography";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAppContext } from "../../providers/AppProvider";
 import { getCrowdConfidence, getCrowdState } from "../../services/busyness";
+import { lightTap, successTap, warningTap } from "../../services/feedback";
 import { BusynessLevel, ContentReportReason } from "../../types";
 import { colors } from "../../theme/colors";
 
@@ -22,6 +23,7 @@ export function GymDetailScreen() {
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [reportReason, setReportReason] = useState<ContentReportReason>("misleading");
   const [reportNotes, setReportNotes] = useState("");
+  const [busyAction, setBusyAction] = useState<"crowd" | "review" | "report" | null>(null);
 
   const confidence = useMemo(() => (gym ? getCrowdConfidence(gym.crowdReports) : "Building"), [gym]);
 
@@ -75,10 +77,17 @@ export function GymDetailScreen() {
         {[25, 50, 75, 95].map((level) => (
           <Pressable
             key={level}
-            style={styles.voteButton}
+            disabled={busyAction !== null}
+            style={({ pressed }) => [styles.voteButton, pressed && styles.buttonPressed, busyAction !== null && styles.actionDisabled]}
             onPress={async () => {
-              const result = await submitBusyness(gym.id, level as BusynessLevel);
-              setFeedbackMessage(result.ok ? "Crowd report submitted." : result.message ?? "Unable to submit crowd report.");
+              setBusyAction("crowd");
+              try {
+                const result = await submitBusyness(gym.id, level as BusynessLevel);
+                await (result.ok ? successTap() : warningTap());
+                setFeedbackMessage(result.ok ? "Crowd report submitted." : result.message ?? "Unable to submit crowd report.");
+              } finally {
+                setBusyAction(null);
+              }
             }}
           >
             <Text style={styles.voteValue}>{level}%</Text>
@@ -123,8 +132,11 @@ export function GymDetailScreen() {
           {[1, 2, 3, 4, 5].map((score) => (
             <Pressable
               key={score}
-              onPress={() => setReviewScore(score)}
-              style={[styles.scoreChip, reviewScore === score && styles.scoreChipActive]}
+              onPress={async () => {
+                await lightTap();
+                setReviewScore(score);
+              }}
+              style={({ pressed }) => [styles.scoreChip, reviewScore === score && styles.scoreChipActive, pressed && styles.buttonPressed]}
             >
               <Text style={[styles.scoreChipText, reviewScore === score && styles.scoreChipTextActive]}>{score}</Text>
             </Pressable>
@@ -139,24 +151,32 @@ export function GymDetailScreen() {
           onChangeText={setReviewBody}
         />
         <Pressable
-          style={styles.submitReviewButton}
+          disabled={busyAction !== null}
+          style={({ pressed }) => [styles.submitReviewButton, pressed && styles.buttonPressed, busyAction !== null && styles.actionDisabled]}
           onPress={async () => {
             if (!reviewBody.trim()) {
+              await warningTap();
               setFeedbackMessage("Write a short review before submitting.");
               return;
             }
-            const result = await submitReview(gym.id, {
-              score: reviewScore,
-              body: reviewBody
-            });
-            setFeedbackMessage(result.message);
-            if (result.ok) {
-              setReviewBody("");
-              setReviewScore(5);
+            setBusyAction("review");
+            try {
+              const result = await submitReview(gym.id, {
+                score: reviewScore,
+                body: reviewBody
+              });
+              await (result.ok ? successTap() : warningTap());
+              setFeedbackMessage(result.message);
+              if (result.ok) {
+                setReviewBody("");
+                setReviewScore(5);
+              }
+            } finally {
+              setBusyAction(null);
             }
           }}
         >
-          <Text style={styles.submitReviewText}>Submit Review</Text>
+          <Text style={styles.submitReviewText}>{busyAction === "review" ? "Submitting..." : "Submit Review"}</Text>
         </Pressable>
       </View>
       <View style={styles.reportCard}>
@@ -168,8 +188,11 @@ export function GymDetailScreen() {
           {(["misleading", "spam", "harassment"] as const).map((reason) => (
             <Pressable
               key={reason}
-              onPress={() => setReportReason(reason)}
-              style={[styles.scoreChip, reportReason === reason && styles.scoreChipActive]}
+              onPress={async () => {
+                await lightTap();
+                setReportReason(reason);
+              }}
+              style={({ pressed }) => [styles.scoreChip, reportReason === reason && styles.scoreChipActive, pressed && styles.buttonPressed]}
             >
               <Text style={[styles.scoreChipText, reportReason === reason && styles.scoreChipTextActive]}>{reason}</Text>
             </Pressable>
@@ -184,26 +207,34 @@ export function GymDetailScreen() {
           onChangeText={setReportNotes}
         />
         <Pressable
-          style={styles.reportButton}
+          disabled={busyAction !== null}
+          style={({ pressed }) => [styles.reportButton, pressed && styles.buttonPressed, busyAction !== null && styles.actionDisabled]}
           onPress={async () => {
             const targetReview = gym.reviews[0];
             if (!targetReview) {
+              await warningTap();
               setFeedbackMessage("No review is available to report yet.");
               return;
             }
-            const result = await reportContent({
-              targetType: "review",
-              targetId: targetReview.id ?? `${gym.id}-review-seeded`,
-              reason: reportReason,
-              notes: reportNotes
-            });
-            setFeedbackMessage(result.message);
-            if (result.ok) {
-              setReportNotes("");
+            setBusyAction("report");
+            try {
+              const result = await reportContent({
+                targetType: "review",
+                targetId: targetReview.id ?? `${gym.id}-review-seeded`,
+                reason: reportReason,
+                notes: reportNotes
+              });
+              await (result.ok ? successTap() : warningTap());
+              setFeedbackMessage(result.message);
+              if (result.ok) {
+                setReportNotes("");
+              }
+            } finally {
+              setBusyAction(null);
             }
           }}
         >
-          <Text style={styles.reportButtonText}>Send to Moderation</Text>
+          <Text style={styles.reportButtonText}>{busyAction === "report" ? "Sending..." : "Send to Moderation"}</Text>
         </Pressable>
       </View>
       <View style={styles.reviewList}>
@@ -326,6 +357,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     gap: 4
+  },
+  buttonPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.98 }]
+  },
+  actionDisabled: {
+    opacity: 0.55
   },
   voteValue: {
     color: colors.textOnStrong,

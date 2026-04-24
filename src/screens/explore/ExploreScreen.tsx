@@ -9,6 +9,7 @@ import { fonts } from "../../constants/typography";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAppContext } from "../../providers/AppProvider";
 import { getCrowdState } from "../../services/busyness";
+import { lightTap } from "../../services/feedback";
 import { colors, shadows } from "../../theme/colors";
 
 export function ExploreScreen() {
@@ -42,6 +43,7 @@ export function ExploreScreen() {
 
   const spotlight = filteredGyms[0] ?? gyms[0];
   const calmGyms = gyms.filter((gym) => gym.liveBusyness < 55).length;
+  const packedGyms = gyms.filter((gym) => gym.liveBusyness >= 80).length;
 
   if (gyms.length === 0) {
     return (
@@ -59,7 +61,10 @@ export function ExploreScreen() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>Live training intelligence</Text>
+        <View style={styles.heroTopRow}>
+          <Text style={styles.eyebrow}>Live training intelligence</Text>
+          <Text style={styles.todayPill}>{new Date().toLocaleDateString(undefined, { weekday: "short" })}</Text>
+        </View>
         <Text style={styles.title}>Pick a gym with better timing, not better luck.</Text>
         <Text style={styles.copy}>
           GymBusy ranks workout options by live crowd conditions, member sentiment, and repeat traffic patterns.
@@ -78,6 +83,15 @@ export function ExploreScreen() {
             <Text style={styles.statLabel}>Pending adds</Text>
           </View>
         </View>
+      </View>
+
+      <View style={styles.dailyBrief}>
+        <Text style={styles.dailyTitle}>Right now</Text>
+        <Text style={styles.dailyBody}>
+          {calmGyms > 0
+            ? `${calmGyms} gyms look comfortable. ${packedGyms > 0 ? `${packedGyms} are likely packed.` : "No gyms are showing as packed."}`
+            : "Most gyms are busy. Use the trend view before heading out."}
+        </Text>
       </View>
 
       <View style={styles.spotlight}>
@@ -113,8 +127,15 @@ export function ExploreScreen() {
           {exploreFilters.map((filter) => (
             <Pressable
               key={filter}
-              onPress={() => setSelectedFilter(filter)}
-              style={[styles.filterChip, selectedFilter === filter && styles.filterChipActive]}
+              onPress={async () => {
+                await lightTap();
+                setSelectedFilter(filter);
+              }}
+              style={({ pressed }) => [
+                styles.filterChip,
+                selectedFilter === filter && styles.filterChipActive,
+                pressed && styles.filterPressed
+              ]}
             >
               <Text style={[styles.filterText, selectedFilter === filter && styles.filterTextActive]}>{filter}</Text>
             </Pressable>
@@ -152,12 +173,27 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 14
   },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
   eyebrow: {
     color: colors.highlight,
     fontFamily: fonts.semibold,
     fontSize: 13,
     textTransform: "uppercase",
     letterSpacing: 1.2
+  },
+  todayPill: {
+    color: colors.textOnStrong,
+    backgroundColor: colors.strongPanel,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    fontFamily: fonts.semibold,
+    fontSize: 12
   },
   title: {
     color: colors.textOnStrong,
@@ -198,6 +234,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 14,
     ...shadows.card
+  },
+  dailyBrief: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 16,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  dailyTitle: {
+    color: colors.text,
+    fontFamily: fonts.heading,
+    fontSize: 18
+  },
+  dailyBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    lineHeight: 21
   },
   spotlightCopy: {
     flex: 1,
@@ -282,6 +336,10 @@ const styles = StyleSheet.create({
   },
   filterChipActive: {
     backgroundColor: colors.highlight
+  },
+  filterPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }]
   },
   filterText: {
     color: colors.text,

@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { fonts } from "../constants/typography";
+import { lightTap } from "../services/feedback";
 import { colors, shadows } from "../theme/colors";
 import { Gym } from "../types";
 
@@ -11,11 +13,16 @@ type Props = {
 export function GymCard({ gym, selected, onPress }: Props) {
   const stateLabel =
     gym.liveBusyness >= 80 ? "Packed" : gym.liveBusyness >= 55 ? "Steady" : "Smooth";
+  const toneColor = gym.liveBusyness >= 80 ? colors.packed : gym.liveBusyness >= 55 ? colors.busy : colors.calm;
+  const toneSoft = gym.liveBusyness >= 80 ? colors.packedSoft : gym.liveBusyness >= 55 ? colors.busySoft : colors.calmSoft;
 
   return (
     <Pressable
-      onPress={onPress}
-      style={[styles.card, selected && styles.cardSelected]}
+      onPress={async () => {
+        await lightTap();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && styles.cardPressed]}
     >
       <View style={styles.row}>
         <View style={styles.copy}>
@@ -24,9 +31,12 @@ export function GymCard({ gym, selected, onPress }: Props) {
             {gym.neighborhood} • {gym.distanceMiles.toFixed(1)} mi
           </Text>
         </View>
-        <View style={[styles.busyBadge, gym.liveBusyness >= 75 ? styles.busyBadgeHigh : styles.busyBadgeLow]}>
+        <View style={[styles.busyBadge, { backgroundColor: toneSoft }]}>
           <Text style={styles.busyValue}>{gym.liveBusyness}%</Text>
         </View>
+      </View>
+      <View style={styles.track}>
+        <View style={[styles.trackFill, { width: `${gym.liveBusyness}%`, backgroundColor: toneColor }]} />
       </View>
       <View style={styles.statsRow}>
         <View style={styles.statPill}>
@@ -62,6 +72,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     transform: [{ scale: 0.99 }]
   },
+  cardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.985 }]
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -75,26 +89,31 @@ const styles = StyleSheet.create({
   name: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: "800"
+    fontFamily: fonts.heading
   },
   meta: {
     color: colors.textMuted,
-    fontSize: 14
+    fontSize: 14,
+    fontFamily: fonts.body
   },
   busyBadge: {
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8
   },
-  busyBadgeHigh: {
-    backgroundColor: colors.packedSoft
-  },
-  busyBadgeLow: {
-    backgroundColor: colors.calmSoft
-  },
   busyValue: {
     color: colors.text,
-    fontWeight: "800"
+    fontFamily: fonts.semibold
+  },
+  track: {
+    height: 7,
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    overflow: "hidden"
+  },
+  trackFill: {
+    height: "100%",
+    borderRadius: 999
   },
   statsRow: {
     flexDirection: "row",
@@ -110,7 +129,7 @@ const styles = StyleSheet.create({
   statPillText: {
     color: colors.text,
     fontSize: 12,
-    fontWeight: "700"
+    fontFamily: fonts.medium
   },
   bottomRow: {
     flexDirection: "row",
@@ -121,11 +140,11 @@ const styles = StyleSheet.create({
   secondary: {
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: "600"
+    fontFamily: fonts.medium
   },
   window: {
     color: colors.highlightStrong,
     fontSize: 13,
-    fontWeight: "800"
+    fontFamily: fonts.semibold
   }
 });

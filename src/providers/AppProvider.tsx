@@ -1,13 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { applyCrowdReport } from "../services/busyness";
-import { createCrowdReport, createGymSubmission, createReview, loadGyms, loadSubmissions } from "../services/repository";
+import {
+  createContentReport,
+  createCrowdReport,
+  createGymSubmission,
+  createReview,
+  loadContentReports,
+  loadGyms,
+  loadSubmissions,
+  updateContentReportStatus
+} from "../services/repository";
 import { signInWithProvider } from "../services/auth";
 import { findPotentialDuplicate, submissionToGym } from "../utils/listings";
 import {
   AuthProvider,
   BackendMode,
   BusynessLevel,
+  ContentReport,
+  ContentReportForm,
+  ContentReportStatus,
   CrowdReport,
   Gym,
   GymSubmission,
@@ -23,6 +35,7 @@ const USER_KEY = "gymbusy:mock-user";
 type AppContextValue = {
   gyms: Gym[];
   submissions: GymSubmission[];
+  contentReports: ContentReport[];
   reports: CrowdReport[];
   user: UserProfile | null;
   backendMode: BackendMode;
@@ -38,6 +51,8 @@ type AppContextValue = {
   submitBusyness: (gymId: string, level: BusynessLevel) => Promise<{ ok: boolean; message?: string }>;
   submitGym: (form: GymSubmissionForm) => Promise<{ message: string; status: SubmissionStatus; ok: boolean }>;
   submitReview: (gymId: string, form: ReviewForm) => Promise<{ ok: boolean; message: string }>;
+  reportContent: (form: ContentReportForm) => Promise<{ ok: boolean; message: string }>;
+  updateReportStatus: (reportId: string, status: ContentReportStatus) => Promise<{ ok: boolean; message: string }>;
   updateSubmissionStatus: (submissionId: string, status: SubmissionStatus) => void;
 };
 
@@ -49,6 +64,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [backendMode, setBackendMode] = useState<BackendMode>("seeded");
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [submissions, setSubmissions] = useState<GymSubmission[]>([]);
+  const [contentReports, setContentReports] = useState<ContentReport[]>([]);
   const [reports, setReports] = useState<CrowdReport[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -57,9 +73,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshData = async () => {
     setIsRefreshing(true);
     try {
-      const [{ gyms: nextGyms, mode }, nextSubmissions] = await Promise.all([loadGyms(), loadSubmissions()]);
+      const [{ gyms: nextGyms, mode }, nextSubmissions, nextContentReports] = await Promise.all([
+        loadGyms(),
+        loadSubmissions(),
+        loadContentReports()
+      ]);
       setGyms(nextGyms);
       setSubmissions(nextSubmissions);
+      setContentReports(nextContentReports);
       setBackendMode(mode);
       setLastSyncMessage(mode === "supabase" ? "Live backend sync complete." : "Using seeded preview data.");
     } finally {
@@ -216,6 +237,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const reportContent = async (form: ContentReportForm) => {
+    const result = await createContentReport({
+      form,
+      user
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        message: result.message
+      };
+    }
+
+    setLastSyncMessage(result.mode === "supabase" ? "Content report sent to moderation." : "Content report captured locally.");
+    setContentReports((current) => [result.report, ...current]);
+    return {
+      ok: true,
+      message: "Report submitted to moderation."
+    };
+  };
+
+  const updateReportStatus = async (reportId: string, status: ContentReportStatus) => {
+    const result = await updateContentReportStatus({
+      reportId,
+      status
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        message: result.message
+      };
+    }
+
+    setContentReports((current) =>
+      current.map((report) => (report.id === reportId ? { ...report, status } : report))
+    );
+    setLastSyncMessage(result.mode === "supabase" ? "Moderation report updated." : "Moderation report updated locally.");
+    return {
+      ok: true,
+      message: status === "resolved" ? "Report resolved." : "Report dismissed."
+    };
+  };
+
   const updateSubmissionStatus = (submissionId: string, status: SubmissionStatus) => {
     const target = submissions.find((submission) => submission.id === submissionId);
     if (!target) {
@@ -237,6 +302,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       gyms,
       submissions,
+      contentReports,
       reports,
       user,
       backendMode,
@@ -252,9 +318,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submitBusyness,
       submitGym,
       submitReview,
+      reportContent,
+      updateReportStatus,
       updateSubmissionStatus
     }),
-    [gyms, submissions, reports, user, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]
+    [gyms, submissions, contentReports, reports, user, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

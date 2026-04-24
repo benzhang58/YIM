@@ -43,6 +43,19 @@ export function ExploreScreen() {
   const spotlight = filteredGyms[0] ?? gyms[0];
   const calmGyms = gyms.filter((gym) => gym.liveBusyness < 55).length;
 
+  if (gyms.length === 0) {
+    return (
+      <Screen>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No gyms have loaded yet.</Text>
+          <Text style={styles.emptyBody}>
+            Connect Supabase and seed your launch city, or refresh again if you expect gyms to be available already.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <View style={styles.hero}>
@@ -115,9 +128,18 @@ export function ExploreScreen() {
       </View>
 
       <View style={styles.list}>
-        {filteredGyms.map((gym) => (
-          <GymCard key={gym.id} gym={gym} selected={gym.id === spotlight.id} onPress={() => navigation.navigate("GymDetail", { gymId: gym.id })} />
-        ))}
+        {filteredGyms.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyCardTitle}>No gyms match this search.</Text>
+            <Text style={styles.emptyCardBody}>
+              Try a broader neighborhood or remove one of the filters. Missing a gym entirely? Add it from the submission tab.
+            </Text>
+          </View>
+        ) : (
+          filteredGyms.map((gym) => (
+            <GymCard key={gym.id} gym={gym} selected={gym.id === spotlight.id} onPress={() => navigation.navigate("GymDetail", { gymId: gym.id })} />
+          ))
+        )}
       </View>
     </Screen>
   );
@@ -284,5 +306,37 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 14
+  },
+  emptyState: {
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    padding: 24,
+    gap: 8
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 28
+  },
+  emptyBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    lineHeight: 22
+  },
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 18,
+    gap: 6
+  },
+  emptyCardTitle: {
+    color: colors.text,
+    fontFamily: fonts.heading,
+    fontSize: 18
+  },
+  emptyCardBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    lineHeight: 21
   }
 });

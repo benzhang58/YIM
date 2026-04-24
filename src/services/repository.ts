@@ -1,6 +1,18 @@
 import { gyms as seedGyms } from "../data/gyms";
 import { seedSubmissions } from "../data/submissions";
-import { BusynessLevel, Gym, GymSubmission, GymSubmissionForm, Review, ReviewForm, UserProfile } from "../types";
+import { seedContentReports } from "../data/contentReports";
+import {
+  BusynessLevel,
+  ContentReport,
+  ContentReportForm,
+  ContentReportStatus,
+  Gym,
+  GymSubmission,
+  GymSubmissionForm,
+  Review,
+  ReviewForm,
+  UserProfile
+} from "../types";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
 function sortGyms(gyms: Gym[]) {
@@ -107,6 +119,28 @@ export async function loadSubmissions(): Promise<GymSubmission[]> {
   }));
 }
 
+export async function loadContentReports(): Promise<ContentReport[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    return seedContentReports;
+  }
+
+  const { data, error } = await supabase.from("content_reports").select("*").order("created_at", { ascending: false });
+  if (error || !data) {
+    return seedContentReports;
+  }
+
+  return data.map((row: any) => ({
+    id: row.id,
+    targetType: row.target_type,
+    targetId: row.target_id,
+    reason: row.reason,
+    notes: row.notes ?? "",
+    reportedBy: row.reported_by ?? "Member",
+    createdAt: "Imported",
+    status: row.status
+  }));
+}
+
 export async function createCrowdReport(input: {
   gymId: string;
   level: BusynessLevel;
@@ -184,4 +218,57 @@ export async function createReview(input: {
   }
 
   return { ok: true, review };
+}
+
+export async function createContentReport(input: {
+  form: ContentReportForm;
+  user: UserProfile | null;
+}): Promise<{ ok: true; mode: "seeded" | "supabase"; report: ContentReport } | { ok: false; message: string }> {
+  const report: ContentReport = {
+    id: `content-report-${Date.now()}`,
+    ...input.form,
+    reportedBy: input.user?.name ?? "Guest member",
+    createdAt: "Just now",
+    status: "open"
+  };
+
+  if (!isSupabaseConfigured || !supabase || !input.user) {
+    return { ok: true, mode: "seeded", report };
+  }
+
+  const { error } = await supabase.from("content_reports").insert({
+    reported_by: input.user.id,
+    target_type: input.form.targetType,
+    target_id: input.form.targetId,
+    reason: input.form.reason,
+    notes: input.form.notes.trim() || null
+  });
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  return { ok: true, mode: "supabase", report };
+}
+
+export async function updateContentReportStatus(input: {
+  reportId: string;
+  status: ContentReportStatus;
+}) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { ok: true as const, mode: "seeded" as const };
+  }
+
+  const { error } = await supabase
+    .from("content_reports")
+    .update({
+      status: input.status
+    })
+    .eq("id", input.reportId);
+
+  if (error) {
+    return { ok: false as const, message: error.message };
+  }
+
+  return { ok: true as const, mode: "supabase" as const };
 }

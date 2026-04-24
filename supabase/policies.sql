@@ -4,6 +4,7 @@ alter table busyness_reports enable row level security;
 alter table gym_submission_requests enable row level security;
 alter table gym_edit_suggestions enable row level security;
 alter table gym_photos enable row level security;
+alter table content_reports enable row level security;
 
 create policy "Public gyms are readable"
 on gyms for select
@@ -23,3 +24,8 @@ create policy "Authenticated users can submit missing gyms"
 on gym_submission_requests for insert
 to authenticated
 with check (auth.uid() = submitted_by);
+
+create policy "Authenticated users can file content reports"
+on content_reports for insert
+to authenticated
+with check (auth.uid() = reported_by);

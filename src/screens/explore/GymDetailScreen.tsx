@@ -9,17 +9,19 @@ import { fonts } from "../../constants/typography";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAppContext } from "../../providers/AppProvider";
 import { getCrowdConfidence, getCrowdState } from "../../services/busyness";
-import { BusynessLevel } from "../../types";
+import { BusynessLevel, ContentReportReason } from "../../types";
 import { colors } from "../../theme/colors";
 
 export function GymDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "GymDetail">>();
-  const { getGym, submitBusyness, submitReview } = useAppContext();
+  const { getGym, submitBusyness, submitReview, reportContent } = useAppContext();
   const gym = getGym(route.params.gymId);
   const [selectedTrendTab, setSelectedTrendTab] = useState<(typeof trendTabs)[number]>("Week");
   const [reviewScore, setReviewScore] = useState(5);
   const [reviewBody, setReviewBody] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [reportReason, setReportReason] = useState<ContentReportReason>("misleading");
+  const [reportNotes, setReportNotes] = useState("");
 
   const confidence = useMemo(() => (gym ? getCrowdConfidence(gym.crowdReports) : "Building"), [gym]);
 
@@ -151,6 +153,53 @@ export function GymDetailScreen() {
           <Text style={styles.submitReviewText}>Submit Review</Text>
         </Pressable>
       </View>
+      <View style={styles.reportCard}>
+        <Text style={styles.reportTitle}>Report suspicious content</Text>
+        <Text style={styles.reportBody}>
+          If busyness reports or reviews look misleading, spammy, or abusive, send them to moderation.
+        </Text>
+        <View style={styles.scoreRow}>
+          {(["misleading", "spam", "harassment"] as const).map((reason) => (
+            <Pressable
+              key={reason}
+              onPress={() => setReportReason(reason)}
+              style={[styles.scoreChip, reportReason === reason && styles.scoreChipActive]}
+            >
+              <Text style={[styles.scoreChipText, reportReason === reason && styles.scoreChipTextActive]}>{reason}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <TextInput
+          style={styles.reviewInput}
+          placeholder="What should the moderation team know?"
+          placeholderTextColor={colors.textMuted}
+          multiline
+          value={reportNotes}
+          onChangeText={setReportNotes}
+        />
+        <Pressable
+          style={styles.reportButton}
+          onPress={async () => {
+            const targetReview = gym.reviews[0];
+            if (!targetReview) {
+              setFeedbackMessage("No review is available to report yet.");
+              return;
+            }
+            const result = await reportContent({
+              targetType: "review",
+              targetId: targetReview.id ?? `${gym.id}-review-seeded`,
+              reason: reportReason,
+              notes: reportNotes
+            });
+            setFeedbackMessage(result.message);
+            if (result.ok) {
+              setReportNotes("");
+            }
+          }}
+        >
+          <Text style={styles.reportButtonText}>Send to Moderation</Text>
+        </Pressable>
+      </View>
       <View style={styles.reviewList}>
         {gym.reviews.map((review) => (
           <View key={review.id ?? `${review.author}-${review.body}`} style={styles.reviewCard}>
@@ -159,6 +208,7 @@ export function GymDetailScreen() {
               <Text style={styles.reviewScore}>{review.score.toFixed(1)}</Text>
             </View>
             <Text style={styles.reviewBody}>{review.body}</Text>
+            <Text style={styles.reviewMeta}>Tap report above if this content looks misleading or abusive.</Text>
           </View>
         ))}
       </View>
@@ -308,6 +358,22 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12
   },
+  reportCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12
+  },
+  reportTitle: {
+    color: colors.text,
+    fontFamily: fonts.heading,
+    fontSize: 18
+  },
+  reportBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    lineHeight: 20
+  },
   reviewComposerTitle: {
     color: colors.text,
     fontFamily: fonts.heading,
@@ -353,6 +419,16 @@ const styles = StyleSheet.create({
     color: colors.surfaceStrong,
     fontFamily: fonts.semibold
   },
+  reportButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center"
+  },
+  reportButtonText: {
+    color: colors.highlightStrong,
+    fontFamily: fonts.semibold
+  },
   reviewCard: {
     backgroundColor: colors.surface,
     borderRadius: 18,
@@ -375,6 +451,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fonts.body,
     lineHeight: 20
+  },
+  reviewMeta: {
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 12
   },
   feedbackMessage: {
     color: colors.highlightStrong,

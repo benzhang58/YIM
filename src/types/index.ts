@@ -90,3 +90,26 @@ export type ReviewForm = {
   score: number;
   body: string;
 };
+
+export type ContentReportReason =
+  | "spam"
+  | "harassment"
+  | "misleading"
+  | "duplicate"
+  | "inappropriate";
+
+export type ContentReportForm = {
+  targetType: "review" | "crowd_report" | "gym_submission";
+  targetId: string;
+  reason: ContentReportReason;
+  notes: string;
+};
+
+export type ContentReportStatus = "open" | "resolved" | "dismissed";
+
+export type ContentReport = ContentReportForm & {
+  id: string;
+  reportedBy: string;
+  createdAt: string;
+  status: ContentReportStatus;
+};

@@ -104,6 +104,20 @@ create table if not exists gym_photos (
   created_at timestamptz not null default now()
 );
 
+create table if not exists content_reports (
+  id uuid primary key default gen_random_uuid(),
+  reported_by uuid references user_profiles(id) on delete set null,
+  target_type text not null check (target_type in ('review', 'crowd_report', 'gym_submission')),
+  target_id uuid not null,
+  reason text not null check (reason in ('spam', 'harassment', 'misleading', 'duplicate', 'inappropriate')),
+  notes text,
+  status text not null default 'open' check (status in ('open', 'resolved', 'dismissed')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_content_reports_status_created_at
+  on content_reports (status, created_at desc);
+
 create or replace function nearby_duplicate_gyms(
   search_name text,
   search_lat numeric,

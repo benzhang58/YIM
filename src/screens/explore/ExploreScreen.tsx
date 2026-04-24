@@ -44,6 +44,13 @@ export function ExploreScreen() {
   const spotlight = filteredGyms[0] ?? gyms[0];
   const calmGyms = gyms.filter((gym) => gym.liveBusyness < 55).length;
   const packedGyms = gyms.filter((gym) => gym.liveBusyness >= 80).length;
+  const hasActiveSearch = Boolean(query.trim()) || selectedFilter !== "All";
+
+  const resetSearch = async () => {
+    await lightTap();
+    setQuery("");
+    setSelectedFilter("All");
+  };
 
   if (gyms.length === 0) {
     return (
@@ -116,13 +123,24 @@ export function ExploreScreen() {
       </View>
 
       <View style={styles.searchCard}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search gyms, neighborhoods, or cities"
-          placeholderTextColor={colors.textMuted}
-          value={query}
-          onChangeText={setQuery}
-        />
+        <View style={styles.searchHeader}>
+          <Text style={styles.searchTitle}>Find your next session</Text>
+          {hasActiveSearch ? (
+            <Pressable onPress={resetSearch} style={({ pressed }) => [styles.clearButton, pressed && styles.filterPressed]}>
+              <Text style={styles.clearButtonText}>Reset</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        <View style={styles.searchInputWrap}>
+          <Text style={styles.searchIcon}>Search</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Gym, neighborhood, or city"
+            placeholderTextColor={colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+          />
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {exploreFilters.map((filter) => (
             <Pressable
@@ -155,6 +173,9 @@ export function ExploreScreen() {
             <Text style={styles.emptyCardBody}>
               Try a broader neighborhood or remove one of the filters. Missing a gym entirely? Add it from the submission tab.
             </Text>
+            <Pressable onPress={resetSearch} style={({ pressed }) => [styles.emptyAction, pressed && styles.filterPressed]}>
+              <Text style={styles.emptyActionText}>Clear search and filters</Text>
+            </Pressable>
           </View>
         ) : (
           filteredGyms.map((gym) => (
@@ -300,6 +321,28 @@ const styles = StyleSheet.create({
     gap: 12,
     ...shadows.card
   },
+  searchHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  searchTitle: {
+    color: colors.text,
+    fontFamily: fonts.heading,
+    fontSize: 18
+  },
+  clearButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+  clearButtonText: {
+    color: colors.highlightStrong,
+    fontFamily: fonts.semibold,
+    fontSize: 12
+  },
   statusBar: {
     backgroundColor: colors.surface,
     borderRadius: 18,
@@ -316,10 +359,26 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     lineHeight: 20
   },
-  searchInput: {
+  searchInputWrap: {
     backgroundColor: colors.background,
     borderRadius: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  searchIcon: {
+    color: colors.highlightStrong,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.7
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.background,
     paddingVertical: 14,
     color: colors.text,
     fontFamily: fonts.body
@@ -385,7 +444,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 18,
-    gap: 6
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border
   },
   emptyCardTitle: {
     color: colors.text,
@@ -396,5 +457,16 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fonts.body,
     lineHeight: 21
+  },
+  emptyAction: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.highlight,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10
+  },
+  emptyActionText: {
+    color: colors.surfaceStrong,
+    fontFamily: fonts.semibold
   }
 });

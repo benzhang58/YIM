@@ -8,8 +8,9 @@ import { fonts } from "../../constants/typography";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAppContext } from "../../providers/AppProvider";
 import { useCurrentLocation } from "../../hooks/useCurrentLocation";
+import { lightTap } from "../../services/feedback";
 import { calculateDistanceMiles } from "../../services/location";
-import { colors } from "../../theme/colors";
+import { colors, shadows } from "../../theme/colors";
 
 export function NearbyScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -41,18 +42,26 @@ export function NearbyScreen() {
         <Text style={styles.copy}>
           Use your location to sort gyms by proximity, then combine that with live crowd data before you head out.
         </Text>
-        <AppButton label={loading ? "Locating..." : "Use My Location"} onPress={requestLocation} />
+        <AppButton label={loading ? "Locating..." : "Use My Location"} loading={loading} disabled={loading} onPress={requestLocation} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
       <View style={styles.webMapCard}>
-        <Text style={styles.webMapTitle}>Web map fallback</Text>
-        <Text style={styles.webMapBody}>
-          Native maps are enabled in the iOS and Android app. On web, GymBusy still sorts gyms using your current location.
-        </Text>
-        <Text style={styles.webMapCoords}>
-          Center: {center.latitude.toFixed(3)}, {center.longitude.toFixed(3)}
-        </Text>
+        <View style={styles.mapPreview}>
+          <View style={styles.mapRing} />
+          <View style={styles.mapPin}>
+            <Text style={styles.mapPinText}>{sortedGyms.length}</Text>
+          </View>
+        </View>
+        <View style={styles.webMapCopy}>
+          <Text style={styles.webMapTitle}>Location-aware sorting</Text>
+          <Text style={styles.webMapBody}>
+            Native maps are enabled in iOS and Android builds. On web, GymBusy still ranks gyms from your current location.
+          </Text>
+          <Text style={styles.webMapCoords}>
+            Center: {center.latitude.toFixed(3)}, {center.longitude.toFixed(3)}
+          </Text>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>Closest gyms</Text>
@@ -61,14 +70,21 @@ export function NearbyScreen() {
           const distance = coords ? calculateDistanceMiles(coords, gym.coordinates).toFixed(1) : gym.distanceMiles.toFixed(1);
 
           return (
-            <Pressable key={gym.id} style={styles.gymRow} onPress={() => navigation.navigate("GymDetail", { gymId: gym.id })}>
+            <Pressable
+              key={gym.id}
+              style={({ pressed }) => [styles.gymRow, pressed && styles.gymRowPressed]}
+              onPress={async () => {
+                await lightTap();
+                navigation.navigate("GymDetail", { gymId: gym.id });
+              }}
+            >
               <View style={styles.gymCopy}>
                 <Text style={styles.gymName}>{gym.name}</Text>
                 <Text style={styles.gymMeta}>
                   {gym.neighborhood} • {distance} mi away
                 </Text>
               </View>
-              <View style={styles.gymBadge}>
+              <View style={[styles.gymBadge, gym.liveBusyness >= 80 ? styles.gymBadgePacked : gym.liveBusyness >= 55 ? styles.gymBadgeBusy : styles.gymBadgeCalm]}>
                 <Text style={styles.gymBadgeValue}>{gym.liveBusyness}%</Text>
               </View>
             </Pressable>
@@ -105,7 +121,46 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 22,
-    gap: 8
+    gap: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card
+  },
+  mapPreview: {
+    width: 86,
+    height: 86,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden"
+  },
+  mapRing: {
+    position: "absolute",
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: 16,
+    borderColor: colors.calmSoft
+  },
+  mapPin: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: colors.highlight,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  mapPinText: {
+    color: colors.surfaceStrong,
+    fontFamily: fonts.bold,
+    fontSize: 18
+  },
+  webMapCopy: {
+    flex: 1,
+    gap: 5
   },
   webMapTitle: {
     color: colors.text,
@@ -135,7 +190,13 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  gymRowPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.985 }]
   },
   gymCopy: {
     flex: 1,
@@ -151,10 +212,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body
   },
   gymBadge: {
-    backgroundColor: colors.surfaceAlt,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10
+  },
+  gymBadgeCalm: {
+    backgroundColor: colors.calmSoft
+  },
+  gymBadgeBusy: {
+    backgroundColor: colors.busySoft
+  },
+  gymBadgePacked: {
+    backgroundColor: colors.packedSoft
   },
   gymBadgeValue: {
     color: colors.text,

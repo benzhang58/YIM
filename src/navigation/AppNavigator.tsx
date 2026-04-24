@@ -1,7 +1,7 @@
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { fonts } from "../constants/typography";
 import { ExploreScreen } from "../screens/explore/ExploreScreen";
 import { GymDetailScreen } from "../screens/explore/GymDetailScreen";
@@ -60,6 +60,21 @@ function labelForRoute(name: keyof MainTabParamList) {
   }
 }
 
+function iconForRoute(name: keyof MainTabParamList) {
+  switch (name) {
+    case "Explore":
+      return "G";
+    case "Nearby":
+      return "N";
+    case "Submit":
+      return "+";
+    case "Queue":
+      return "Q";
+    case "Profile":
+      return "P";
+  }
+}
+
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -68,20 +83,27 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 76,
-          paddingBottom: 10,
-          paddingTop: 8
+          borderTopWidth: 1,
+          height: 84,
+          paddingBottom: 12,
+          paddingTop: 10,
+          shadowColor: "#1B1F24",
+          shadowOpacity: 0.08,
+          shadowOffset: { width: 0, height: -10 },
+          shadowRadius: 18,
+          elevation: 12
         },
         tabBarLabelStyle: {
           fontFamily: fonts.semibold,
-          fontSize: 12
+          fontSize: 11,
+          marginTop: 2
         },
         tabBarActiveTintColor: colors.highlightStrong,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarIcon: ({ focused, color }) => (
-          <Text style={{ color, fontFamily: fonts.display, fontSize: focused ? 14 : 12 }}>
-            {focused ? "●" : "○"}
-          </Text>
+        tabBarIcon: ({ focused }) => (
+          <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+            <Text style={[styles.tabIconText, focused && styles.tabIconTextActive]}>{iconForRoute(route.name as keyof MainTabParamList)}</Text>
+          </View>
         ),
         tabBarLabel: labelForRoute(route.name as keyof MainTabParamList)
       })}
@@ -112,3 +134,26 @@ export function AppNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIcon: {
+    width: 30,
+    height: 26,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  tabIconActive: {
+    width: 38,
+    backgroundColor: colors.highlight
+  },
+  tabIconText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 12
+  },
+  tabIconTextActive: {
+    color: colors.surfaceStrong
+  }
+});

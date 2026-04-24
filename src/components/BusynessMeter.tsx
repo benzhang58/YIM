@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { fonts } from "../constants/typography";
 import { colors } from "../theme/colors";
 
 type Props = {
@@ -48,16 +49,18 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 13,
     marginBottom: 2
   },
   value: {
     color: colors.text,
     fontSize: 32,
-    fontWeight: "800"
+    fontFamily: fonts.bold
   },
   meta: {
     color: colors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 13,
     flex: 1,
     textAlign: "right"
@@ -79,6 +82,6 @@ const styles = StyleSheet.create({
   scaleText: {
     color: colors.textMuted,
     fontSize: 12,
-    fontWeight: "600"
+    fontFamily: fonts.medium
   }
 });

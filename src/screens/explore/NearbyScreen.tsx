@@ -9,8 +9,9 @@ import { fonts } from "../../constants/typography";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAppContext } from "../../providers/AppProvider";
 import { useCurrentLocation } from "../../hooks/useCurrentLocation";
+import { lightTap } from "../../services/feedback";
 import { calculateDistanceMiles } from "../../services/location";
-import { colors } from "../../theme/colors";
+import { colors, shadows } from "../../theme/colors";
 
 export function NearbyScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -44,7 +45,7 @@ export function NearbyScreen() {
         <Text style={styles.copy}>
           Use your location to sort gyms by proximity, then combine that with live crowd data before you head out.
         </Text>
-        <AppButton label={loading ? "Locating..." : "Use My Location"} onPress={requestLocation} />
+        <AppButton label={loading ? "Locating..." : "Use My Location"} loading={loading} disabled={loading} onPress={requestLocation} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
@@ -67,14 +68,21 @@ export function NearbyScreen() {
           const distance = coords ? calculateDistanceMiles(coords, gym.coordinates).toFixed(1) : gym.distanceMiles.toFixed(1);
 
           return (
-            <Pressable key={gym.id} style={styles.gymRow} onPress={() => navigation.navigate("GymDetail", { gymId: gym.id })}>
+            <Pressable
+              key={gym.id}
+              style={({ pressed }) => [styles.gymRow, pressed && styles.gymRowPressed]}
+              onPress={async () => {
+                await lightTap();
+                navigation.navigate("GymDetail", { gymId: gym.id });
+              }}
+            >
               <View style={styles.gymCopy}>
                 <Text style={styles.gymName}>{gym.name}</Text>
                 <Text style={styles.gymMeta}>
                   {gym.neighborhood} • {distance} mi away
                 </Text>
               </View>
-              <View style={styles.gymBadge}>
+              <View style={[styles.gymBadge, gym.liveBusyness >= 80 ? styles.gymBadgePacked : gym.liveBusyness >= 55 ? styles.gymBadgeBusy : styles.gymBadgeCalm]}>
                 <Text style={styles.gymBadgeValue}>{gym.liveBusyness}%</Text>
               </View>
             </Pressable>
@@ -110,7 +118,10 @@ const styles = StyleSheet.create({
   mapCard: {
     borderRadius: 24,
     overflow: "hidden",
-    height: 320
+    height: 320,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card
   },
   map: {
     flex: 1
@@ -129,7 +140,13 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  gymRowPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.985 }]
   },
   gymCopy: {
     flex: 1,
@@ -145,10 +162,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body
   },
   gymBadge: {
-    backgroundColor: colors.surfaceAlt,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10
+  },
+  gymBadgeCalm: {
+    backgroundColor: colors.calmSoft
+  },
+  gymBadgeBusy: {
+    backgroundColor: colors.busySoft
+  },
+  gymBadgePacked: {
+    backgroundColor: colors.packedSoft
   },
   gymBadgeValue: {
     color: colors.text,

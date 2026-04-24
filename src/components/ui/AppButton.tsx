@@ -8,13 +8,15 @@ export function AppButton({
   onPress,
   variant = "primary",
   loading = false,
-  disabled = false
+  disabled = false,
+  fullWidth = true
 }: {
   label: string;
   onPress: () => void | Promise<void>;
   variant?: "primary" | "secondary";
   loading?: boolean;
   disabled?: boolean;
+  fullWidth?: boolean;
 }) {
   const isDisabled = disabled || loading;
 
@@ -27,6 +29,7 @@ export function AppButton({
       }}
       style={({ pressed }) => [
         styles.button,
+        fullWidth && styles.fullWidth,
         variant === "primary" ? styles.primary : styles.secondary,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled
@@ -47,7 +50,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 18,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    minHeight: 50
+  },
+  fullWidth: {
+    alignSelf: "stretch"
   },
   primary: {
     backgroundColor: colors.highlight

@@ -15,7 +15,7 @@ import { colors } from "../../theme/colors";
 
 export function GymDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "GymDetail">>();
-  const { getGym, submitBusyness, submitReview, reportContent } = useAppContext();
+  const { getGym, submitBusyness, submitReview, reportContent, isGymSaved, toggleSavedGym } = useAppContext();
   const gym = getGym(route.params.gymId);
   const [selectedTrendTab, setSelectedTrendTab] = useState<(typeof trendTabs)[number]>("Week");
   const [reviewScore, setReviewScore] = useState(5);
@@ -26,6 +26,7 @@ export function GymDetailScreen() {
   const [busyAction, setBusyAction] = useState<"crowd" | "review" | "report" | null>(null);
 
   const confidence = useMemo(() => (gym ? getCrowdConfidence(gym.crowdReports) : "Building"), [gym]);
+  const saved = gym ? isGymSaved(gym.id) : false;
 
   if (!gym) {
     return (
@@ -38,7 +39,19 @@ export function GymDetailScreen() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.heroLabel}>Selected gym</Text>
+        <View style={styles.heroTopRow}>
+          <Text style={styles.heroLabel}>Selected gym</Text>
+          <Pressable
+            onPress={async () => {
+              await toggleSavedGym(gym.id);
+              await successTap();
+              setFeedbackMessage(saved ? "Removed from saved gyms." : "Saved for quick crowd checks.");
+            }}
+            style={({ pressed }) => [styles.saveHeroButton, saved && styles.saveHeroButtonActive, pressed && styles.buttonPressed]}
+          >
+            <Text style={[styles.saveHeroButtonText, saved && styles.saveHeroButtonTextActive]}>{saved ? "Saved" : "Save gym"}</Text>
+          </Pressable>
+        </View>
         <Text style={styles.heroTitle}>{gym.name}</Text>
         <Text style={styles.heroCopy}>
           {gym.neighborhood}, {gym.city} • {gym.address}
@@ -260,11 +273,34 @@ const styles = StyleSheet.create({
     padding: 22,
     gap: 6
   },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
   heroLabel: {
     color: colors.highlight,
     fontFamily: fonts.semibold,
     textTransform: "uppercase",
     letterSpacing: 1
+  },
+  saveHeroButton: {
+    backgroundColor: colors.strongPanel,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  saveHeroButtonActive: {
+    backgroundColor: colors.highlight
+  },
+  saveHeroButtonText: {
+    color: colors.textOnStrong,
+    fontFamily: fonts.semibold,
+    fontSize: 12
+  },
+  saveHeroButtonTextActive: {
+    color: colors.surfaceStrong
   },
   heroTitle: {
     color: colors.textOnStrong,

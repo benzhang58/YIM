@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { GestureResponderEvent, Pressable, StyleSheet, Text, View } from "react-native";
 import { fonts } from "../constants/typography";
 import { lightTap } from "../services/feedback";
 import { colors, shadows } from "../theme/colors";
@@ -7,10 +7,12 @@ import { Gym } from "../types";
 type Props = {
   gym: Gym;
   selected: boolean;
+  saved?: boolean;
   onPress: () => void;
+  onToggleSaved?: () => void;
 };
 
-export function GymCard({ gym, selected, onPress }: Props) {
+export function GymCard({ gym, selected, saved = false, onPress, onToggleSaved }: Props) {
   const stateLabel =
     gym.liveBusyness >= 80 ? "Packed" : gym.liveBusyness >= 55 ? "Steady" : "Smooth";
   const toneColor = gym.liveBusyness >= 80 ? colors.packed : gym.liveBusyness >= 55 ? colors.busy : colors.calm;
@@ -26,13 +28,34 @@ export function GymCard({ gym, selected, onPress }: Props) {
     >
       <View style={styles.row}>
         <View style={styles.copy}>
-          <Text style={styles.name}>{gym.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{gym.name}</Text>
+            {saved ? (
+              <View style={styles.savedMiniPill}>
+                <Text style={styles.savedMiniPillText}>Saved</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.meta}>
             {gym.neighborhood} • {gym.distanceMiles.toFixed(1)} mi
           </Text>
         </View>
-        <View style={[styles.busyBadge, { backgroundColor: toneSoft }]}>
-          <Text style={styles.busyValue}>{gym.liveBusyness}%</Text>
+        <View style={styles.actionColumn}>
+          {onToggleSaved ? (
+            <Pressable
+              onPress={async (event: GestureResponderEvent) => {
+                event.stopPropagation();
+                await lightTap();
+                onToggleSaved();
+              }}
+              style={({ pressed }) => [styles.saveButton, saved && styles.saveButtonActive, pressed && styles.saveButtonPressed]}
+            >
+              <Text style={[styles.saveButtonText, saved && styles.saveButtonTextActive]}>{saved ? "Saved" : "Save"}</Text>
+            </Pressable>
+          ) : null}
+          <View style={[styles.busyBadge, { backgroundColor: toneSoft }]}>
+            <Text style={styles.busyValue}>{gym.liveBusyness}%</Text>
+          </View>
         </View>
       </View>
       <View style={styles.track}>
@@ -86,10 +109,27 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8
+  },
   name: {
     color: colors.text,
     fontSize: 18,
     fontFamily: fonts.heading
+  },
+  savedMiniPill: {
+    backgroundColor: colors.calmSoft,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  savedMiniPillText: {
+    color: colors.calm,
+    fontFamily: fonts.semibold,
+    fontSize: 11
   },
   meta: {
     color: colors.textMuted,
@@ -100,6 +140,31 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8
+  },
+  actionColumn: {
+    alignItems: "flex-end",
+    gap: 8
+  },
+  saveButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7
+  },
+  saveButtonActive: {
+    backgroundColor: colors.surfaceStrong
+  },
+  saveButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.96 }]
+  },
+  saveButtonText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 12
+  },
+  saveButtonTextActive: {
+    color: colors.textOnStrong
   },
   busyValue: {
     color: colors.text,

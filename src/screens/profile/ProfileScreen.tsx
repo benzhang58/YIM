@@ -20,7 +20,7 @@ const providerLabels: Record<AuthProvider, string> = {
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { user, signIn, signOut, backendMode, refreshData, gyms, reports, submissions, contentReports, isRefreshing, lastSyncMessage } =
+  const { user, signIn, signOut, backendMode, refreshData, gyms, reports, savedGymIds, contentReports, isRefreshing, lastSyncMessage } =
     useAppContext();
   const [notificationMessage, setNotificationMessage] = useState("");
   const [authAction, setAuthAction] = useState<AuthProvider | "signout" | null>(null);
@@ -32,14 +32,10 @@ export function ProfileScreen() {
     () => gyms.reduce((count, gym) => count + gym.reviews.filter((review) => review.author === user?.name).length, 0),
     [gyms, user?.name]
   );
-  const submittedGymsCount = useMemo(
-    () => submissions.filter((submission) => submission.submittedBy === user?.name).length,
-    [submissions, user?.name]
-  );
   const memberStats = [
-    { label: "Session reports", value: reports.length.toString() },
+    { label: "Saved gyms", value: savedGymIds.length.toString() },
     { label: "Reviews", value: reviewsCount.toString() },
-    { label: "Gym adds", value: submittedGymsCount.toString() }
+    { label: "Reports", value: reports.length.toString() }
   ];
 
   const handleSignIn = async (provider: AuthProvider) => {

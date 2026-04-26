@@ -35,12 +35,14 @@ import {
 const ONBOARDING_KEY = "gymbusy:onboarding-complete";
 const USER_KEY = "gymbusy:mock-user";
 const ACTION_LOG_KEY = "gymbusy:action-log";
+const SAVED_GYMS_KEY = "gymbusy:saved-gyms";
 
 type AppContextValue = {
   gyms: Gym[];
   submissions: GymSubmission[];
   contentReports: ContentReport[];
   reports: CrowdReport[];
+  savedGymIds: string[];
   user: UserProfile | null;
   backendMode: BackendMode;
   hydrated: boolean;
@@ -52,6 +54,8 @@ type AppContextValue = {
   signIn: (provider: AuthProvider, email?: string) => Promise<{ message: string }>;
   signOut: () => Promise<void>;
   getGym: (gymId: string) => Gym | undefined;
+  isGymSaved: (gymId: string) => boolean;
+  toggleSavedGym: (gymId: string) => Promise<void>;
   submitBusyness: (gymId: string, level: BusynessLevel) => Promise<{ ok: boolean; message?: string }>;
   submitGym: (form: GymSubmissionForm) => Promise<{ message: string; status: SubmissionStatus; ok: boolean }>;
   submitReview: (gymId: string, form: ReviewForm) => Promise<{ ok: boolean; message: string }>;
@@ -71,6 +75,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [submissions, setSubmissions] = useState<GymSubmission[]>([]);
   const [contentReports, setContentReports] = useState<ContentReport[]>([]);
   const [reports, setReports] = useState<CrowdReport[]>([]);
+  const [savedGymIds, setSavedGymIds] = useState<string[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [actionLog, setActionLog] = useState<ActionLog>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -100,13 +105,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(ONBOARDING_KEY),
         AsyncStorage.getItem(USER_KEY)
       ]);
-      const storedActionLog = await AsyncStorage.getItem(ACTION_LOG_KEY);
+      const [storedActionLog, storedSavedGyms] = await Promise.all([
+        AsyncStorage.getItem(ACTION_LOG_KEY),
+        AsyncStorage.getItem(SAVED_GYMS_KEY)
+      ]);
 
       await refreshData();
       const sessionUser = await getCurrentUserProfile(gyms[0]?.id);
       setOnboardingComplete(storedOnboarding === "true");
       setUser(sessionUser ?? (storedUser ? (JSON.parse(storedUser) as UserProfile) : null));
       setActionLog(storedActionLog ? (JSON.parse(storedActionLog) as ActionLog) : {});
+      setSavedGymIds(storedSavedGyms ? (JSON.parse(storedSavedGyms) as string[]) : []);
       setHydrated(true);
     };
 
@@ -164,6 +173,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const getGym = (gymId: string) => gyms.find((gym) => gym.id === gymId);
+
+  const isGymSaved = (gymId: string) => savedGymIds.includes(gymId);
+
+  const toggleSavedGym = async (gymId: string) => {
+    const nextSavedGymIds = savedGymIds.includes(gymId)
+      ? savedGymIds.filter((savedGymId) => savedGymId !== gymId)
+      : [gymId, ...savedGymIds];
+
+    setSavedGymIds(nextSavedGymIds);
+    await AsyncStorage.setItem(SAVED_GYMS_KEY, JSON.stringify(nextSavedGymIds));
+    setLastSyncMessage(nextSavedGymIds.includes(gymId) ? "Gym saved." : "Gym removed from saved.");
+  };
 
   const recordAction = async (key: string) => {
     const nextLog = {
@@ -399,6 +420,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submissions,
       contentReports,
       reports,
+      savedGymIds,
       user,
       backendMode,
       hydrated,
@@ -410,6 +432,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       getGym,
+      isGymSaved,
+      toggleSavedGym,
       submitBusyness,
       submitGym,
       submitReview,
@@ -418,7 +442,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       requestAccountDeletion,
       updateSubmissionStatus
     }),
-    [gyms, submissions, contentReports, reports, user, actionLog, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]
+    [gyms, submissions, contentReports, reports, savedGymIds, user, actionLog, backendMode, hydrated, isRefreshing, lastSyncMessage, onboardingComplete]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

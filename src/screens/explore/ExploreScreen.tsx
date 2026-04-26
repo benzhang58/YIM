@@ -14,7 +14,7 @@ import { colors, shadows } from "../../theme/colors";
 
 export function ExploreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { gyms, submissions, backendMode, isRefreshing, lastSyncMessage } = useAppContext();
+  const { gyms, submissions, savedGymIds, backendMode, isRefreshing, lastSyncMessage, isGymSaved, toggleSavedGym } = useAppContext();
   const [query, setQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<(typeof exploreFilters)[number]>("All");
 
@@ -31,6 +31,9 @@ export function ExploreScreen() {
       if (selectedFilter === "Open now") {
         return gym.isOpen;
       }
+      if (selectedFilter === "Saved") {
+        return savedGymIds.includes(gym.id);
+      }
       if (selectedFilter === "Top rated") {
         return gym.rating >= 4.7;
       }
@@ -39,7 +42,7 @@ export function ExploreScreen() {
       }
       return true;
     });
-  }, [gyms, query, selectedFilter]);
+  }, [gyms, query, savedGymIds, selectedFilter]);
 
   const spotlight = filteredGyms[0] ?? gyms[0];
   const calmGyms = gyms.filter((gym) => gym.liveBusyness < 55).length;
@@ -95,11 +98,31 @@ export function ExploreScreen() {
       <View style={styles.dailyBrief}>
         <Text style={styles.dailyTitle}>Right now</Text>
         <Text style={styles.dailyBody}>
-          {calmGyms > 0
-            ? `${calmGyms} gyms look comfortable. ${packedGyms > 0 ? `${packedGyms} are likely packed.` : "No gyms are showing as packed."}`
+          {savedGymIds.length > 0
+            ? `${savedGymIds.length} saved gyms are ready for quick checks. ${calmGyms > 0 ? `${calmGyms} gyms look comfortable now.` : "Most gyms are busy right now."}`
+            : calmGyms > 0
+              ? `${calmGyms} gyms look comfortable. ${packedGyms > 0 ? `${packedGyms} are likely packed.` : "No gyms are showing as packed."}`
             : "Most gyms are busy. Use the trend view before heading out."}
         </Text>
       </View>
+
+      {savedGymIds.length > 0 ? (
+        <View style={styles.savedStrip}>
+          <View>
+            <Text style={styles.savedStripTitle}>Saved gyms</Text>
+            <Text style={styles.savedStripBody}>Your fastest path to checking crowd levels before you leave.</Text>
+          </View>
+          <Pressable
+            onPress={async () => {
+              await lightTap();
+              setSelectedFilter("Saved");
+            }}
+            style={({ pressed }) => [styles.savedStripButton, pressed && styles.filterPressed]}
+          >
+            <Text style={styles.savedStripButtonText}>View saved</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.spotlight}>
         <View style={styles.spotlightCopy}>
@@ -179,7 +202,14 @@ export function ExploreScreen() {
           </View>
         ) : (
           filteredGyms.map((gym) => (
-            <GymCard key={gym.id} gym={gym} selected={gym.id === spotlight.id} onPress={() => navigation.navigate("GymDetail", { gymId: gym.id })} />
+            <GymCard
+              key={gym.id}
+              gym={gym}
+              selected={gym.id === spotlight.id}
+              saved={isGymSaved(gym.id)}
+              onToggleSaved={() => toggleSavedGym(gym.id)}
+              onPress={() => navigation.navigate("GymDetail", { gymId: gym.id })}
+            />
           ))
         )}
       </View>
@@ -273,6 +303,39 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fonts.body,
     lineHeight: 21
+  },
+  savedStrip: {
+    backgroundColor: colors.calmSoft,
+    borderRadius: 22,
+    padding: 16,
+    gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  savedStripTitle: {
+    color: colors.text,
+    fontFamily: fonts.heading,
+    fontSize: 18
+  },
+  savedStripBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    maxWidth: 220,
+    lineHeight: 20
+  },
+  savedStripButton: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 10
+  },
+  savedStripButtonText: {
+    color: colors.textOnStrong,
+    fontFamily: fonts.semibold,
+    fontSize: 12
   },
   spotlightCopy: {
     flex: 1,

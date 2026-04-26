@@ -6,19 +6,35 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "gymbusy",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#F3EFE6"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "buildNumber": "1",
+      "supportsTablet": false,
       "bundleIdentifier": "com.gymbusy.app",
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "GymBusy uses your location to show nearby gyms and sort by distance.",
-        "NSUserTrackingUsageDescription": "GymBusy may use identifiers to reduce spam and improve crowd report integrity."
+        "NSUserTrackingUsageDescription": "GymBusy may use identifiers to reduce spam and improve crowd report integrity.",
+        "UIRequiresFullScreen": true
       }
     },
     "android": {
       "package": "com.gymbusy.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#10233F"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",

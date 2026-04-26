@@ -15,6 +15,7 @@ This file separates code-side launch work from items that require the app owner,
 - Release validation script: `npm run validate:release`.
 - GitHub Actions CI for install, typecheck, and release validation.
 - Store listing draft and data safety draft under `store/`.
+- iPhone-first app config, icon, splash asset, and QA checklist in `IOS_READINESS.md`.
 
 ## Owner actions before store submission
 
@@ -29,6 +30,7 @@ This file separates code-side launch work from items that require the app owner,
 - Decide final bundle ID/package name. Current placeholder is `com.gymbusy.app`.
 - Provide final support email, support URL, privacy URL, and marketing website URL.
 - Create final App Store and Google Play listing copy, screenshots, icon, and splash assets.
+- Review `IOS_READINESS.md` before TestFlight.
 - Review and replace drafts in `store/metadata/en-US/listing.md` and `store/privacy/data-safety.md`.
 - Create a reviewer/test account if the stores need authenticated access.
 

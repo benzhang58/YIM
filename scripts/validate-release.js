@@ -9,6 +9,9 @@ const requiredFiles = [
   "LAUNCH_CHECKLIST.md",
   "supabase/schema.sql",
   "supabase/policies.sql",
+  "assets/icon.png",
+  "assets/splash.png",
+  "assets/adaptive-icon.png",
   "store/metadata/en-US/listing.md",
   "store/privacy/data-safety.md"
 ];
@@ -38,8 +41,28 @@ if (!app.name || !app.slug || !app.scheme) {
   errors.push("app.json must include expo.name, expo.slug, and expo.scheme.");
 }
 
+if (!app.icon || !exists(app.icon.replace(/^\.\//, ""))) {
+  errors.push("app.json must include expo.icon pointing to an existing asset.");
+}
+
+if (!app.splash?.image || !exists(app.splash.image.replace(/^\.\//, ""))) {
+  errors.push("app.json must include expo.splash.image pointing to an existing asset.");
+}
+
 if (!app.ios?.bundleIdentifier) {
   errors.push("app.json must include expo.ios.bundleIdentifier.");
+}
+
+if (!app.ios?.buildNumber) {
+  errors.push("app.json must include expo.ios.buildNumber.");
+}
+
+if (app.ios?.supportsTablet !== false) {
+  warnings.push("iOS supportsTablet is not false. For an iPhone-first app, confirm iPad support intentionally.");
+}
+
+if (app.ios?.usesAppleSignIn !== true) {
+  warnings.push("iOS usesAppleSignIn is not enabled. Enable it before offering Apple sign-in in production.");
 }
 
 if (!app.android?.package) {
